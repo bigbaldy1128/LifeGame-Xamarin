@@ -1,11 +1,6 @@
 ﻿using SkiaSharp;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using TouchTracking;
 using Xamarin.Forms;
 
@@ -18,29 +13,27 @@ namespace LifeGame_Xamarin
             InitializeComponent();
         }
 
-        private bool[,] struArr;
-        private bool[,] struArr2;
+        private int[,] board;
         private int width;
         private int height;
-        private int interval = 10;
-        private int area = 25;
+        private const int interval = 10;
+        private const int area = 25;
         private int oldX, oldY;
         private bool canRun = false;
 
-
-        SKPaint blackStrokePaint = new SKPaint
+        readonly SKPaint blackStrokePaint = new SKPaint
         {
             Style = SKPaintStyle.Stroke,
             Color = SKColors.Black,
         };
 
-        SKPaint whiteFillPaint = new SKPaint
+        readonly SKPaint whiteFillPaint = new SKPaint
         {
             Style = SKPaintStyle.Fill,
             Color = SKColors.White
         };
 
-        SKPaint blackFillPaint = new SKPaint
+        readonly SKPaint blackFillPaint = new SKPaint
         {
             Style = SKPaintStyle.Fill,
             Color = SKColors.Black
@@ -50,54 +43,52 @@ namespace LifeGame_Xamarin
         {
             SKSurface surface = e.Surface;
             SKCanvas canvas = surface.Canvas;
-            canvas.Clear(SKColors.LightGray);
-            this.width = e.Info.Width / area;
-            this.height = e.Info.Height / area;
 
-            if (struArr2 == null)
+            canvas.Clear(SKColors.LightGray);
+
+            width = e.Info.Width / area;
+            height = e.Info.Height / area;
+
+            if (board == null)
             {
-                struArr2 = new bool[width, height];
-                struArr = new bool[width, height];
+                board = new int[width, height];
             }
 
             for (int i = 0; i < width; i++)
             {
                 for (int j = 0; j < height; j++)
                 {
-                    SKPaint paint = struArr2[i, j] ? blackFillPaint : whiteFillPaint;
-                    canvas.DrawRect(area * i + 1, area * j + 1, area-2, area-2, paint);
+                    SKPaint paint = board[i, j] == 1 ? blackFillPaint : whiteFillPaint;
+                    canvas.DrawRect((area * i) + 1, (area * j) + 1, area - 2, area - 2, paint);
                 }
             }
         }
 
-        void OnTouchEffectAction(object sender, TouchActionEventArgs args)
+        private void OnTouchEffectAction(object sender, TouchActionEventArgs args)
         {
             switch (args.Type)
             {
-                case TouchActionType.Pressed:
-
-                    break;
                 case TouchActionType.Moved:
                     SKPoint point = ConvertToPixel(args.Location);
                     int x = (int)point.X / area;
                     int y = (int)point.Y / area;
                     if (x == oldX && y == oldY)
+                    {
                         return;
+                    }
                     if (x > width - 1 || x < 0 || y > height - 1 || y < 0)
+                    {
                         return;
+                    }
                     oldX = x;
                     oldY = y;
-                    struArr[x,y] = !struArr[x,y];
-                    struArr2[x,y] = struArr[x,y];
+                    board[x, y] = board[x, y] == 0 ? 1 : 0;
                     canvasView.InvalidateSurface();
-                    break;
-                case TouchActionType.Released:
-
                     break;
             }
         }
 
-        SKPoint ConvertToPixel(TouchTrackingPoint point)
+        private SKPoint ConvertToPixel(TouchTrackingPoint point)
         {
             return new SKPoint((float)(canvasView.CanvasSize.Width * point.X / canvasView.Width),
                                (float)(canvasView.CanvasSize.Height * point.Y / canvasView.Height));
@@ -107,6 +98,7 @@ namespace LifeGame_Xamarin
         {
             if (button_start.Text == "Start")
             {
+                canRun = true;
                 Start();
                 button_start.Text = "Stop";
             }
@@ -117,78 +109,67 @@ namespace LifeGame_Xamarin
             }
         }
 
+        void GameOfLife(int[,] board)
+        {
+            int[] neighbors = { 0, 1, -1 };
+
+            int rows = board.GetLength(0);
+            int cols = board.GetLength(1);
+
+            for (int row = 0; row < rows; row++)
+            {
+                for (int col = 0; col < cols; col++)
+                {
+                    int liveNeighbors = 0;
+
+                    for (int i = 0; i < 3; i++)
+                    {
+                        for (int j = 0; j < 3; j++)
+                        {
+                            if (!(neighbors[i] == 0 && neighbors[j] == 0))
+                            {
+                                int r = row + neighbors[i];
+                                int c = col + neighbors[j];
+                                r = r >= rows ? 0 : r;
+                                r = r < 0 ? rows - 1 : r;
+                                c = c >= cols ? 0 : c;
+                                c = c < 0 ? cols - 1 : c;
+                                if (r < rows && r >= 0 && c < cols && c >= 0 && (Math.Abs(board[r, c]) == 1))
+                                {
+                                    liveNeighbors += 1;
+                                }
+                            }
+                        }
+                    }
+
+                    if ((board[row, col] == 1) && (liveNeighbors < 2 || liveNeighbors > 3))
+                    {
+                        board[row, col] = -1;
+                    }
+                    if (board[row, col] == 0 && liveNeighbors == 3)
+                    {
+                        board[row, col] = 2;
+                    }
+                }
+            }
+
+            for (int row = 0; row < rows; row++)
+            {
+                for (int col = 0; col < cols; col++)
+                {
+                    board[row, col] = board[row, col] > 0 ? 1 : 0;
+                }
+            }
+        }
+
         public void Start()
         {
-            canRun = true;
             new Thread(() =>
             {
                 while (canRun)
                 {
-                    for (int i = 0; i < width; i++)
-                        for (int j = 0; j < height; j++)
-                            struArr2[i, j] = struArr[i, j];
-
-                    for (int i = 0; i < width; i++)
-                        for (int j = 0; j < height; j++)
-                        {
-                            int count = 0;
-                            if (struArr[i - 1 == -1 ? width - 1 : i - 1, j - 1 == -1 ? height - 1 : j - 1])
-                            {
-                                count++;
-                            }
-                            if (struArr[i - 1 == -1 ? width - 1 : i - 1, j])
-                            {
-                                count++;
-                            }
-                            if (struArr[i - 1 == -1 ? width - 1 : i - 1, j + 1 == height ? 0 : j + 1])
-                            {
-                                count++;
-                            }
-                            if (struArr[i, j - 1 == -1 ? height - 1 : j - 1])
-                            {
-                                count++;
-                            }
-                            if (struArr[i, j + 1 == height ? 0 : j + 1])
-                            {
-                                count++;
-                            }
-                            if (struArr[i + 1 == width ? 0 : i + 1, j - 1 == -1 ? height - 1 : j - 1])
-                            {
-                                count++;
-                            }
-                            if (struArr[i + 1 == width ? 0 : i + 1, j])
-                            {
-                                count++;
-                            }
-                            if (struArr[i + 1 == width ? 0 : i + 1, j + 1 == height ? 0 : j + 1])
-                            {
-                                count++;
-                            }
-                            switch (count)
-                            {
-                                case 3:
-                                    struArr2[i, j] = true;
-                                    break;
-                                case 2:
-                                    if (struArr[i, j])
-                                    {
-                                        struArr2[i, j] = true;
-                                    }
-                                    break;
-                                default:
-                                    struArr2[i, j] = false;
-                                    break;
-                            }
-                        }
+                    GameOfLife(board);
                     canvasView.InvalidateSurface();
-                    for (int i = 0; i < width; i++)
-                    {
-                        for (int j = 0; j < height; j++)
-                        {
-                            struArr[i, j] = struArr2[i, j];
-                        }
-                    }
-
                     Thread.Sleep(interval);
                 }
             }).Start();
