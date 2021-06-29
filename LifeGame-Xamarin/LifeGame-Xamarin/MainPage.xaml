@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:skia="clr-namespace:SkiaSharp.Views.Forms;assembly=SkiaSharp.Views.Forms"
+             xmlns:tt="clr-namespace:TouchTracking.Forms;assembly=TouchTracking.Forms"
+             x:Class="LifeGame_Xamarin.MainPage">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="10*"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid BackgroundColor="White">
+            <skia:SKCanvasView x:Name="canvasView" PaintSurface="OnCanvasViewPaintSurface" />
+            <Grid.Effects>
+                <tt:TouchEffect Capture="True" TouchAction="OnTouchEffectAction" />
+            </Grid.Effects>
+        </Grid>
+        <Button x:Name="button_start" Grid.Row="1" Text="Start" Clicked="Button_Clicked"/>
+    </Grid>
+</ContentPage>
