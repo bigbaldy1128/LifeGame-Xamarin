@@ -68,6 +68,7 @@ namespace LifeGame_Xamarin
         {
             switch (args.Type)
             {
+                case TouchActionType.Pressed:
                 case TouchActionType.Moved:
                     SKPoint point = ConvertToPixel(args.Location);
                     int x = (int)point.X / area;
